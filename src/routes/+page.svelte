@@ -1,4 +1,6 @@
 <script>
+	import { complex, divide, multiply, add, subtract, exp } from 'mathjs';
+
 	/*
 		FFT FORMULAS.
 			Recommended reads:
@@ -7,42 +9,48 @@
 			https://www.ee.iitm.ac.in/~csr/teaching/pg_dsp/lecnotes/fft.pdf
 	*/
 
-	function FFT(x, y) {
-		const N = x.length;
-		if (N == 1) return [[1, x[0], y[0]]];
+	/* 
+	This is a simple system to make the inputted array into a complex one.
+		This is done so that the original array can directly be used in the graphing.
+		And the complex one used in the mathematics.
+	*/
+	function arrayToComplex(array) {
+		let complexArray = [];
+		for (let i = 0; i < array.length; i++) {
+			let comp = complex(array[i][0], array[i][1]);
+			complexArray.push(comp);
+		}
+		return complexArray;
+	}
+	/*	
+		This is the fft. It uses the cooley turkey approach, with divide and conquer.
+	*/
 
-		const X_even = [],
-			X_odd = [],
-			Y_even = [],
-			Y_odd = [];
-		for (let i = 0; i < N; i++) {
-			if (i % 2 == 0) {
-				X_even.push(x[i]);
-				Y_even.push(y[i]);
+	function FFT(complexsignal) {
+		let X = [];
+		let N = complexsignal.length;
+		if (N === 1) {
+			return complexsignal;
+		}
+		let WN = exp(divide(multiply(2 * Math.PI, complex('0 + 1i')), N));
+		let W = 1;
+		let AEVEN = [];
+		let AODD = [];
+		for (let j = 0; j < N; j++) {
+			if (j % 2 === 0) {
+				AEVEN.push(complexsignal[j]);
 			} else {
-				X_odd.push(x[i]);
-				Y_odd.push(y[i]);
+				AODD.push(complexsignal[j]);
 			}
 		}
-
-		const X_even_FFT = FFT(X_even, Y_even);
-		const X_odd_FFT = FFT(X_odd, Y_odd);
-
-		const X_FFT = [];
-		for (let i = 0; i < N / 2; i++) {
-			const omega_n = (-2 * Math.PI * i) / N;
-			const x_even = X_even_FFT[i][1],
-				y_even = X_even_FFT[i][2];
-			const x_odd = X_odd_FFT[i][1],
-				y_odd = X_odd_FFT[i][2];
-
-			const x_re = x_even + Math.cos(omega_n) * x_odd - Math.sin(omega_n) * y_odd;
-			const x_im = y_even + Math.sin(omega_n) * x_odd + Math.cos(omega_n) * y_odd;
-			X_FFT.push([i, x_re, x_im]);
-			X_FFT.push([N - i, x_re, -x_im]);
+		let YEVEN = FFT(AEVEN);
+		let YODD = FFT(AODD);
+		for (let i = 0; i < N / 2 - 1; i++) {
+			X[i] = add(YEVEN[i], multiply(W, YODD[i]));
+			X[i + N / 2] = subtract(YEVEN[i], multiply(W, YODD[i]));
+			W = multiply(W, WN);
 		}
-
-		return X_FFT;
+		return X;
 	}
 	/*
 		DEFAULT CHART SETTINGS.
@@ -55,6 +63,7 @@
 		[-1, 1],
 		[1, -1]
 	];
+	/* csvArray[x][0] is real, csvArray[x][1] is imaginary.*/
 	let csvDelimiter = ',';
 	let csvDecimalSymbol = '.';
 	let csvCommentSymbol = '#';
@@ -85,10 +94,7 @@
 		};
 	};
 
-	$: transformedCsvArray = FFT(
-		csvArray.map((val) => val[0]),
-		csvArray.map((val) => val[1])
-	);
+	$: transformedCsvArray = FFT(arrayToComplex(csvArray));
 
 	/* These two are only used in the fourier graph.*/
 	$: transformedCsvArrayPhase = [];
@@ -104,10 +110,13 @@
 		GENERATE AN OUTPUT CSV FILE.
 	*/
 
-	let csvWriter = (csvData, csvDelimit, csvDecimal) => {
+	let csvWriter = (csvData, csvDelimit, csvDecimal, amplitudeIndex = 1) => {
 		let csvString = '';
 		csvData.map((i) => {
-			if (i[1] !== 0) {
+			if (i[amplitudeIndex] !== 0) {
+				/* The i[1] checks for amplitude,
+				 we dont want to write the functions which do not contribute anything.
+				 */
 				i.map((j) => {
 					csvString += `${j.toString().replace('.', csvDecimal)}${csvDelimit}`;
 				});
@@ -121,7 +130,7 @@
 	let filename = 'fft-results.csv';
 	let csvDownloader = () => {
 		let text = `${csvCommentSymbol}Frequency${csvDelimiter} Phaseshift${csvDelimiter} Amplitude${csvDelimiter} \n`;
-		/*text+=csvWriter(transformedCsvArray, csvDelimiter, csvDecimalSymbol);*/
+		/*text+=csvWriter(transformedCsvArray, csvDelimiter, csvDecimalSymbol, 1);*/
 		let blob = new Blob([text], { type: 'text/plain' });
 		downloadButton.download = filename;
 		downloadButton.href = window.URL.createObjectURL(blob);
@@ -248,7 +257,7 @@
 <button
 	class="btn absolute top-[5%] right-[5%]"
 	data-toggle-theme="dark,light"
-	data-act-class="ACTIVECLASS">🌞Dark🌑</button
+	data-act-class="ACTIVECLASS">Dark</button
 >
 
 <label for="my-modal" class="absolute top-[15%] right-[5%] btn">
