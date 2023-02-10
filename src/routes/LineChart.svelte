@@ -83,5 +83,3 @@
 <div id="chart-container">
 	<canvas id="chart" width="500" height="300" bind:this={ctx} />
 </div>
-
-<!-- Man i really dislike the labeling system of chart.js-->

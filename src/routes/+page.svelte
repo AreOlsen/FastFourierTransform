@@ -1,72 +1,96 @@
 <script>
-	import { complex, divide, multiply, add, subtract, exp } from 'mathjs';
+	import { create, all, complex } from 'mathjs';
 
 	/*
-		FFT FORMULAS.
-			Recommended reads:
-			https://www.iba.edu.pk/IBALibraries/ORC/onlinebooks/int_2005_emer_tech/Files/41.pdf
-			https://people.scs.carleton.ca/~maheshwa/courses/5703COMP/16Fall/FFT_Report.pdf
-			https://www.ee.iitm.ac.in/~csr/teaching/pg_dsp/lecnotes/fft.pdf
+		Create a Math.JS instance with configuration.
+	*/
+	const config = {
+		epsilon: 1e-12,
+		matrix: 'Matrix',
+		number: 'number',
+		precision: 64,
+		predictable: false,
+		randomSeed: null
+	};
+	const math = create(all, config);
+
+	/*	
+		Array To Complex.
+		TODO:
+		Optimize the code to get rid of all standard number arrays.
 	*/
 
-	/* 
-	This is a simple system to make the inputted array into a complex one.
-		This is done so that the original array can directly be used in the graphing.
-		And the complex one used in the mathematics.
-	*/
 	function arrayToComplex(array) {
 		let complexArray = [];
 		for (let i = 0; i < array.length; i++) {
-			let comp = complex(array[i][0], array[i][1]);
+			let comp = math.complex(array[i][0], array[i][1]);
 			complexArray.push(comp);
 		}
 		return complexArray;
 	}
-	/*	
-		This is the fft. It uses the cooley turkey approach, with divide and conquer.
-	*/
 
+	function isPowerOfTwo(n) {
+		return n > 0 && (n & (n - 1)) == 0;
+	}
+
+	/*	
+	FFT.
+		Recommended reads:
+			https://www.iba.edu.pk/IBALibraries/ORC/onlinebooks/int_2005_emer_tech/Files/41.pdf
+			https://people.scs.carleton.ca/~maheshwa/courses/5703COMP/16Fall/FFT_Report.pdf
+			https://www.ee.iitm.ac.in/~csr/teaching/pg_dsp/lecnotes/fft.pdf
+	*/
 	function FFT(complexsignal) {
-		let X = [];
-		let N = complexsignal.length;
+		let Y = [],
+			N = complexsignal.length;
 		if (N === 1) {
 			return complexsignal;
 		}
-		let WN = exp(divide(multiply(2 * Math.PI, complex('0 + 1i')), N));
-		let W = 1;
-		let AEVEN = [];
-		let AODD = [];
-		for (let j = 0; j < N; j++) {
-			if (j % 2 === 0) {
-				AEVEN.push(complexsignal[j]);
-			} else {
-				AODD.push(complexsignal[j]);
+
+		let WN = math.pow(math.e, math.divide(math.multiply(2 * math.pi, math.i), N)),
+			W = 1;
+		let AEVEN = [],
+			AODD = [];
+		for (let i = 0; i < N; i++) {
+			if (i % 2 === 0) {
+				AEVEN.push(complexsignal[i]);
+				continue;
 			}
+			AODD.push(complexsignal[i]);
 		}
-		let YEVEN = FFT(AEVEN);
-		let YODD = FFT(AODD);
-		for (let i = 0; i < N / 2 - 1; i++) {
-			X[i] = add(YEVEN[i], multiply(W, YODD[i]));
-			X[i + N / 2] = subtract(YEVEN[i], multiply(W, YODD[i]));
-			W = multiply(W, WN);
+		let YEVEN = FFT(AEVEN),
+			YODD = FFT(AODD);
+		for (let j = 0; j < N / 2; j++) {
+			Y[j] = math.add(YEVEN[j], math.multiply(W, YODD[j]));
+			Y[j + N / 2] = math.subtract(YEVEN[j], math.multiply(W, YODD[j]));
+			W = math.multiply(W, WN);
 		}
-		return X;
+		return Y;
 	}
 	/*
 		DEFAULT CHART SETTINGS.
 	*/
 	import Chart from './LineChart.svelte';
 	let dataCsv;
+
+	/*
+		csvArray[x][0] is real, csvArray[x][1] is imaginary.
+	*/
 	let csvArray = [
 		[-1, 1],
 		[1, -1],
 		[-1, 1],
 		[1, -1]
 	];
-	/* csvArray[x][0] is real, csvArray[x][1] is imaginary.*/
+
 	let csvDelimiter = ',';
 	let csvDecimalSymbol = '.';
 	let csvCommentSymbol = '#';
+
+	let showError = false;
+	/*
+		READ IN CSV FILES OF DATA.
+	*/
 
 	let csvReader = () => {
 		let fr = new FileReader();
@@ -90,47 +114,48 @@
 				}
 				values.push(lineValues);
 			}
+			showError = false;
+			if (!isPowerOfTwo(values.length)) {
+				showError = true;
+				let amountZeroPad = math.pow(2, math.ceil(math.log(values.length, 2))) - values.length;
+				for (let i = 0; i < amountZeroPad; i++) {
+					values.push([0, 0]);
+				}
+			}
 			csvArray = values;
 		};
 	};
 
 	$: transformedCsvArray = FFT(arrayToComplex(csvArray));
 
-	/* These two are only used in the fourier graph.*/
-	$: transformedCsvArrayPhase = [];
-	$: transformedCsvArrayAmplitude = [];
-
-	/*
-		transformedCsvArray.map((val) => {
-			transformedCsvArrayPhase.push(val[2]);
-			transformedCsvArrayAmplitude.push(val[1]);
-		});
-	*/
 	/*	
 		GENERATE AN OUTPUT CSV FILE.
 	*/
 
-	let csvWriter = (csvData, csvDelimit, csvDecimal, amplitudeIndex = 1) => {
+	let csvWriter = (csvData, csvDelimit, csvDecimal) => {
 		let csvString = '';
-		csvData.map((i) => {
-			if (i[amplitudeIndex] !== 0) {
-				/* The i[1] checks for amplitude,
-				 we dont want to write the functions which do not contribute anything.
-				 */
-				i.map((j) => {
-					csvString += `${j.toString().replace('.', csvDecimal)}${csvDelimit}`;
-				});
-				csvString += '\n';
-			}
-		});
+		for (let i = 0; i < csvData.length; i++) {
+			csvString += `${i}${csvDelimiter} ${csvData[i].re
+				.toString()
+				.replace('.', csvDecimal)}${csvDelimit} ${csvData[i].im
+				.toString()
+				.replace('.', csvDecimal)}\n`;
+		}
 		return csvString;
 	};
+
+	/*
+		${csvDelimit} ${math.sqrt(
+					math.pow(csvData[i].re, 2) + math.pow(csvData[i].im, 2)
+				)}${csvDelimit} ${math.atan(math.divide(csvData[i].im, csvData[i].re))}
+		${csvDelimiter} Magnitude${csvDelimiter} PhaseShift
+	*/
 
 	let downloadButton;
 	let filename = 'fft-results.csv';
 	let csvDownloader = () => {
-		let text = `${csvCommentSymbol}Frequency${csvDelimiter} Phaseshift${csvDelimiter} Amplitude${csvDelimiter} \n`;
-		/*text+=csvWriter(transformedCsvArray, csvDelimiter, csvDecimalSymbol, 1);*/
+		let text = `${csvCommentSymbol}Frequency${csvDelimiter} Real${csvDelimiter} Complex\n`;
+		text += csvWriter(transformedCsvArray, csvDelimiter, csvDecimalSymbol);
 		let blob = new Blob([text], { type: 'text/plain' });
 		downloadButton.download = filename;
 		downloadButton.href = window.URL.createObjectURL(blob);
@@ -170,6 +195,10 @@
 		<p class="py-4">
 			One should take note that when one inputs with imaginary values and there are missing values
 			from the imaginary values column, it will assume that the missing values are zero in value.
+			Likewise, due to the nature of the Cooley Turkey FFT algorithm, if the input length is not a
+			power of 2, the output will be zero-padded untill it is. This may create outputs which are not
+			inherently incorrect, but one may have to be careful with the interpretation and selection of
+			the basis sinusoidal functions.
 		</p>
 		<div class="modal-action">
 			<label for="my-modal" class="btn">Okay!</label>
@@ -244,14 +273,39 @@
 	<div class="flex flex-col justify-center gap">
 		<span>Frequency graph:</span>
 		<Chart
-			points={transformedCsvArrayAmplitude}
-			points2={transformedCsvArrayPhase}
-			yAxisLabel="Amplitude & Phase Shift"
-			xAxisLabel="Frequency"
+			points={transformedCsvArray.map((val) => val.re)}
+			points2={transformedCsvArray.map((val) => val.im)}
+			yAxisLabel="Real And Imaginary Values"
+			xAxisLabel="x"
 		/>
 	</div>
-	<a class="btn" bind:this={downloadButton} on:keydown={csvDownloader}
-		>Download .CSV Fourier Values</a
+	<a class="btn" bind:this={downloadButton} on:click={csvDownloader}>Download .CSV Fourier Values</a
+	>
+	{#if showError}
+		<div class="alert alert-warning shadow-lg">
+			<div>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					class="stroke-current flex-shrink-0 h-6 w-6"
+					fill="none"
+					viewBox="0 0 24 24"
+					><path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+					/></svg
+				>
+				<span>Warning: Input has been zero-padded due to not being 2^N in length!</span>
+			</div>
+		</div>
+	{/if}
+	<a href="https://github.com/SimonGoBrrr" class="flex flex-row gap-5"
+		><span>Created By Are Olsen - 10.02.2023 - V.0.1</span><img
+			src="github.png"
+			style="height:25px"
+			alt="Github logo"
+		/></a
 	>
 </main>
 <button
@@ -259,7 +313,6 @@
 	data-toggle-theme="dark,light"
 	data-act-class="ACTIVECLASS">Dark</button
 >
-
 <label for="my-modal" class="absolute top-[15%] right-[5%] btn">
 	<span>Info</span>
 </label>
