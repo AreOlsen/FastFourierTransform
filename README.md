@@ -1,38 +1,19 @@
-# create-svelte
+# FFT (Fast Fourier Transform).
+This is a simple project to learn about the FFT algorithm which has and will become handy, it takes in a csv file with plotted points which then are read into the fft and it outputs the frequencies. If the signal is not a power of two it will zero-pad it so that it is, this is due to a limitation with the algorithm being used. This is made for academical purposes, take the outputs with a grain of salt if they are zero-padded, theoretically they can be used to reconstruct the original signal but one often has to be careful with these.
 
-Everything you need to build a Svelte project, powered by [`create-svelte`](https://github.com/sveltejs/kit/tree/master/packages/create-svelte).
 
-## Creating a project
+## Resources:
+### FFT.
+* https://www.iba.edu.pk/IBALibraries/ORC/onlinebooks/int_2005_emer_tech/Files/41.pdf
+* https://people.scs.carleton.ca/~maheshwa/courses/5703COMP/16Fall/FFT_Report.pdf
+* https://www.ee.iitm.ac.in/~csr/teaching/pg_dsp/lecnotes/fft.pdf
+* https://en.wikipedia.org/wiki/Cooley%E2%80%93Tukey_FFT_algorithm
+* https://www.youtube.com/watch?v=nmgFG7PUHfo
+* https://www.youtube.com/watch?v=spUNpyF58BY
+* https://www.youtube.com/watch?v=mkGsMWi_j4Q
 
-If you're seeing this, you've probably already done this step. Congrats!
+### Svelte.
+* https://svelte.dev/
 
-```bash
-# create a new project in the current directory
-npm create svelte@latest
-
-# create a new project in my-app
-npm create svelte@latest my-app
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```bash
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-## Building
-
-To create a production version of your app:
-
-```bash
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://kit.svelte.dev/docs/adapters) for your target environment.
+### Chart.js
+* https://www.chartjs.org/
