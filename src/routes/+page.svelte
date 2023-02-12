@@ -171,7 +171,7 @@
 			Please follow the following format if only using real values.
 		</p>
 		<div class="mockup-code flex flex-col items-start">
-			<pre data-prefix="1"><code>{csvCommentSymbol}Real Values.</code></pre>
+			<pre data-prefix="1"><code>{csvCommentSymbol}Real Values</code></pre>
 			<pre data-prefix="2"><code>1{csvDecimalSymbol}1{csvDelimiter}</code></pre>
 			<pre data-prefix="3"><code>2{csvDecimalSymbol}1{csvDelimiter}</code></pre>
 			<pre data-prefix="4"><code>3{csvDecimalSymbol}75{csvDelimiter}</code></pre>
@@ -257,7 +257,7 @@
 				/>
 			</div>
 			<div class="flex flex-col">
-				<label for="csvComment">CSV Delimiter</label>
+				<label for="csvComment">CSV Comment</label>
 				<input
 					style="color:white"
 					id="csvComment"
