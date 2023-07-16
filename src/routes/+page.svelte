@@ -300,7 +300,7 @@
 			</div>
 		</div>
 	{/if}
-	<a href="https://github.com/SimonGoBrrr" class="flex flex-row gap-5"
+	<a href="https://github.com/AreOlsen" class="flex flex-row gap-5"
 		><span>Created By Are Olsen - 10.02.2023 - V.0.1</span><img
 			src="github.png"
 			style="height:25px"
